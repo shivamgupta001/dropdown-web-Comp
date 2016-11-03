@@ -1,0 +1,199 @@
+<template id="dropdown-template">
+	<style type="text/css">
+		#dropdown-outer{
+			border : 1px solid grey;
+			display: flex;
+			align-items: center;
+			font-size: medium;
+		}
+		#dropdown-inner{
+			visibility: hidden;
+			display: flex;
+			opacity: 0;
+			position: absolute;
+			background-color: white;
+			border : 1px solid grey;
+			justify-content: center;
+			align-items: center;
+			overflow-y: auto;
+			flex-direction: column;
+		}
+		.dropdown-active{
+			visibility: visible !important; 
+			opacity: 1 !important;
+		}
+		ul{
+			list-style-type: none;
+			margin : 0px;
+			padding: 0px;
+			min-width: inherit;
+		}
+		::content li{
+			
+			background-color: white;
+			margin : 2px;
+			cursor: pointer;
+
+		}
+		::content li.inactive{
+			display : none;
+		}
+		::content li:hover{
+			background-color: cadetblue;
+		}
+		::content li:focus{
+			background-color: grey;
+		}
+		::content li[focused=true]{
+			background-color: yellow;
+		}
+
+	</style>
+		
+		<input id="dropdown-outer" type="text" name="dropdown">
+		<div id="dropdown-inner">
+			<ul>
+				<content select="li"></content>
+			</ul>
+		</div>
+</template>
+<script type="text/javascript">
+	var thisdoc = document._currentScript.ownerDocument;
+	var template = thisdoc.getElementById('dropdown-template');
+	var proto = Object.create(HTMLElement.prototype);
+
+	proto.createdCallback = function(){
+		
+		var clone = document.importNode(template.content, true);
+
+		
+		var width = this.getAttribute('width');
+		var height = this.getAttribute('height');
+		var listHeight = this.getAttribute('list-height');
+
+		var dropDownOuter = clone.getElementById('dropdown-outer');
+		var dropDownInner = clone.getElementById('dropdown-inner');	
+
+		dropDownOuter.style.width = width +'px';
+		dropDownOuter.style.height = height +'px';
+
+		dropDownInner.style.minWidth = width +'px';
+		dropDownInner.style.maxHeight = listHeight +'px';
+
+		this.addEventListener('focus', function(event){
+			var dropdown =  this.shadowRoot.getElementById('dropdown-inner');
+			dropdown.classList.add('dropdown-active');
+			
+			var list = this.getElementsByTagName("li");
+			var i;
+			for(i=0;i<list.length;i++){
+				list[i].setAttribute("tabindex",-1);
+			}
+			var l = this.querySelector('li[focused=true]');
+			if(l != null)
+				l.setAttribute('focused',true);	
+		});
+		/*this.addEventListener('blur', function(event){
+		
+			var dropdown = this.shadowRoot.getElementById('dropdown-inner');
+			dropdown.classList.remove('dropdown-active');
+		});*/
+
+		
+		this.createShadowRoot().appendChild(clone);	
+	};
+	proto.attachedCallback = function(){
+		
+		this.shadowRoot.querySelector('ul').addEventListener('click', function(e){
+			if(e.target.nodeName === "LI"){
+				
+				var l = e.target;
+				var dropdownOuter = this.shadowRoot.getElementById('dropdown-outer');
+				var dropdownInner = this.shadowRoot.getElementById('dropdown-inner');
+				dropdownOuter.value = l.innerText;
+				var list = l.parentElement.children;
+				var i;
+				for(i=0;i<list.length;i++){
+					list[i].removeAttribute('focused');
+				}
+				l.setAttribute('focused',true);	
+
+				this.closeDropdown(dropdownInner);
+			}
+			
+		}.bind(this));
+
+		this.shadowRoot.querySelector('input').addEventListener('keydown', function(e){
+			var li = this.querySelector('li[focused=true]');
+			if(e.keyCode === 40){
+				if(li == null){
+					var l = this.querySelector("li");
+					l.setAttribute('focused', true);
+				}else{
+					var l = li.nextElementSibling;
+					if(l != null){
+						li.removeAttribute("focused",true);
+						l.setAttribute('focused',true);
+					}	
+				}
+			}else if(e.keyCode === 38){
+				var l = li.previousElementSibling;
+				if(l != null){
+					li.removeAttribute("focused",true);
+					l.setAttribute('focused',true);
+						
+				}	
+			}else if(e.keyCode === 13){
+				
+				var l = e.target;
+				if(l != null){
+					var dropdownInner = this.shadowRoot.getElementById('dropdown-inner');
+					
+					l.value = li.innerText; 
+					this.closeDropdown(dropdownInner);
+					this.blur();
+				}
+			}
+			
+		}.bind(this));
+		
+		this.shadowRoot.querySelector('input').addEventListener('input', function(e){
+			var val = e.target.value;
+			var list = this.getElementsByTagName('li');
+			var caseSearch = this.getAttribute('case') === "false" ? false : true;
+			var i,item;
+			for(i=0;i<list.length;i++){
+				list[i].classList.remove('inactive');
+			}
+			for(i=0;i<list.length;i++){
+				
+				if(caseSearch){
+					item = list[i].innerText;
+					if(item.indexOf(val) === -1){
+						list[i].classList.add("inactive");
+					}
+				} 
+				else{
+					item = list[i].innerText.toLowerCase();	
+					val = val.toLowerCase();
+					if(item.indexOf(val) === -1){
+						list[i].classList.add('inactive');
+					} 
+				} 
+				
+				
+			}
+
+		}.bind(this));
+
+	};
+	proto.closeDropdown = function(dropdown){
+			dropdown.classList.remove('dropdown-active');
+	};
+	proto.attributeChangedCallback = function(){
+		debugger;
+	};
+	document.registerElement('tf-dropdown',{
+		prototype : proto
+	});
+</script>
